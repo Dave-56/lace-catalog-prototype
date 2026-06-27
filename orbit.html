@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#303246" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LACE" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Save the shops and items LACE should remember." />
+    <title>LACE Orbit</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/lace-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/lace-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell orbit-page">
+      <header class="topbar" aria-label="Workspace">
+        <a class="brand" href="/" aria-label="LACE home">
+          <span class="brand-mark">L</span>
+          <span>LACE</span>
+        </a>
+
+        <nav class="mode-tabs" aria-label="Workspace views">
+          <a class="mode-tab" href="/">Look</a>
+          <a class="mode-tab active" href="/orbit.html">Orbit</a>
+          <a class="mode-tab" href="/alerts.html">Alerts</a>
+        </nav>
+      </header>
+
+      <section class="orbit-hero" aria-labelledby="orbit-title">
+        <p class="eyebrow">Style orbit</p>
+        <h1 id="orbit-title">Shops and items</h1>
+        <p class="subhead">Save the shops and exact items LACE should remember.</p>
+      </section>
+
+      <section class="orbit-surface" aria-label="Orbit memory">
+        <div class="orbit-head">
+          <div class="orbit-capture">
+            <label class="signal-field" for="brand-signal">
+              <span>Add or find shop</span>
+              <input
+                id="brand-signal"
+                type="search"
+                autocomplete="off"
+                placeholder="shop name or domain"
+              />
+            </label>
+
+            <p class="orbit-status" id="orbit-status" aria-live="polite"></p>
+          </div>
+
+          <div class="orbit-head-actions">
+            <button class="orbit-save-button" id="save-shop-button" type="button">Save shop</button>
+
+            <div class="orbit-tabs" aria-label="Orbit filters">
+              <button class="orbit-tab active" type="button" data-orbit-filter="shop">
+                <span>Shops</span>
+                <strong id="shop-lane-count">0</strong>
+              </button>
+              <button class="orbit-tab" type="button" data-orbit-filter="item">
+                <span>Items</span>
+                <strong id="item-lane-count">0</strong>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="orbit-console">
+          <div class="brand-deck" id="brand-deck" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="pwa.js"></script>
+    <script src="shop-data.js"></script>
+    <script src="orbit.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "lace-catalog-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "smoke:alerts": "node scripts/smoke-alerts.js"
+  }
+}

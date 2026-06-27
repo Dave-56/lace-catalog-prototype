@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#303246" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LACE" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Shop the look from any outfit photo." />
+    <title>LACE Look</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/lace-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/lace-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar" aria-label="Workspace">
+        <a class="brand" href="#" aria-label="LACE home">
+          <span class="brand-mark">L</span>
+          <span>LACE</span>
+        </a>
+
+        <nav class="mode-tabs" aria-label="Workspace views">
+          <a class="mode-tab active" href="/">Look</a>
+          <a class="mode-tab" href="/orbit.html">Orbit</a>
+          <a class="mode-tab" href="/alerts.html">Alerts</a>
+        </nav>
+      </header>
+
+      <section class="scanner" aria-labelledby="page-title">
+        <div class="scanner-copy">
+          <p class="eyebrow">Catalog search</p>
+          <h1 id="page-title">Frame it. Tap it. Own it.</h1>
+          <p class="subhead">Drag over one item, then search buyable matches from the catalog layer.</p>
+        </div>
+
+        <div class="look-rail" aria-label="Reference images">
+          <button
+            class="look-card tilt-left"
+            type="button"
+            data-sample="studio"
+            aria-label="Search studio outfit"
+          >
+            <img
+              alt=""
+              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=760&q=80"
+            />
+            <span>studio</span>
+          </button>
+          <button
+            class="look-card tilt-right"
+            type="button"
+            data-sample="street"
+            aria-label="Search street outfit"
+          >
+            <img
+              alt=""
+              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=760&q=80"
+            />
+            <span>street</span>
+          </button>
+          <button
+            class="look-card tilt-left-soft"
+            type="button"
+            data-sample="weekend"
+            aria-label="Search weekend outfit"
+          >
+            <img
+              alt=""
+              src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=760&q=80"
+            />
+            <span>weekend</span>
+          </button>
+          <button
+            class="look-card tilt-right-soft"
+            type="button"
+            data-sample="evening"
+            aria-label="Search evening outfit"
+          >
+            <img
+              alt=""
+              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=760&q=80"
+            />
+            <span>evening</span>
+          </button>
+
+          <label class="upload-card" for="image-upload" aria-label="Upload a photo">
+            <input id="image-upload" type="file" accept="image/*" />
+            <span class="upload-plus" aria-hidden="true">+</span>
+            <span class="upload-text">Upload<br />your photo</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Catalog results">
+        <aside class="source-panel">
+          <div class="panel-head">
+            <p class="eyebrow">Selected look</p>
+            <button class="icon-button" id="clear-button" type="button" aria-label="Clear image" title="Clear image">
+              x
+            </button>
+          </div>
+          <div class="preview-frame" id="preview-frame">
+            <button class="empty-preview" id="preview-upload-button" type="button" data-upload-preview>
+              <span aria-hidden="true">+</span>
+              <span>Select a sample or upload</span>
+            </button>
+          </div>
+          <div class="query-card">
+            <div>
+              <span class="chip">area-search</span>
+              <span class="chip live">live</span>
+            </div>
+            <p id="query-summary">Waiting for an image.</p>
+          </div>
+        </aside>
+
+        <section class="results-panel" aria-live="polite">
+          <div class="results-head">
+            <div>
+              <p class="eyebrow">Matches</p>
+              <h2 id="results-title">Catalog shop</h2>
+            </div>
+            <button class="primary-button" id="search-button" type="button" disabled>
+              <span aria-hidden="true">*</span>
+              Search
+            </button>
+          </div>
+
+          <div class="status-line" id="status-line">Choose a look to start.</div>
+          <div class="product-grid" id="product-grid"></div>
+          <button class="load-more-button" id="load-more-button" type="button" hidden>
+            Load more
+          </button>
+        </section>
+      </section>
+    </main>
+
+    <script src="pwa.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

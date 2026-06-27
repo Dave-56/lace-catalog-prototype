@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">LACE</title>
+  <desc id="desc">LACE app icon</desc>
+  <rect width="512" height="512" rx="96" fill="#eef2f0"/>
+  <rect x="52" y="52" width="408" height="408" rx="72" fill="#f8faf7" stroke="#303246" stroke-width="18"/>
+  <path d="M168 126h72v216h122v54H168V126Z" fill="#303246"/>
+  <path d="M338 104h74v74h-74z" fill="#cfa64b"/>
+  <path d="M98 338h82v58H98z" fill="#d95f4b"/>
+  <path d="M338 338h76v58h-76z" fill="#2f6f5d"/>
+</svg>

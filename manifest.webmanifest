@@ -1,0 +1,36 @@
+{
+  "name": "LACE",
+  "short_name": "LACE",
+  "description": "Shop the look from any outfit photo.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eef2f0",
+  "theme_color": "#303246",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/lace-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Look",
+      "short_name": "Look",
+      "url": "/"
+    },
+    {
+      "name": "Orbit",
+      "short_name": "Orbit",
+      "url": "/orbit.html"
+    },
+    {
+      "name": "Alerts",
+      "short_name": "Alerts",
+      "url": "/alerts.html"
+    }
+  ]
+}

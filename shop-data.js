@@ -1,0 +1,28 @@
+window.LACE_SHOP_PROFILES = [
+  {
+    id: "suggest_hours",
+    type: "shop",
+    name: "Hours",
+    domain: "hourscollection.com",
+    url: "https://hourscollection.com/",
+    source: "search_add_shop",
+    sellerName: "Hours",
+    signal: "streetwear hoodies sweatpants denim outerwear blanks",
+    summary: "Streetwear shop with hoodies, sweatpants, denim, outerwear, blanks, and seasonal drops.",
+    cadence: "Live Shopify arrivals",
+    fit: "Best for relaxed streetwear, blanks, denim, and everyday sets.",
+  },
+  {
+    id: "suggest_bare-knuckles",
+    type: "shop",
+    name: "Bare Knuckles",
+    domain: "bareknuckles.co",
+    url: "https://bareknuckles.co/",
+    source: "search_add_shop",
+    sellerName: "Bare Knuckles",
+    signal: "menswear knitwear denim leather outerwear minimal luxury",
+    summary: "Menswear shop with restrained silhouettes, knitwear, denim, outerwear, and seasonal capsules.",
+    cadence: "Live Shopify arrivals",
+    fit: "Best for understated menswear, knits, denim, and outerwear.",
+  },
+];

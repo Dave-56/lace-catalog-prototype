@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#303246" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LACE" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Review live shop details from your LACE orbit." />
+    <title>LACE Shop</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/lace-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/lace-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell shop-page">
+      <header class="topbar" aria-label="Workspace">
+        <a class="brand" href="/" aria-label="LACE home">
+          <span class="brand-mark">L</span>
+          <span>LACE</span>
+        </a>
+
+        <nav class="mode-tabs" aria-label="Workspace views">
+          <a class="mode-tab" href="/">Look</a>
+          <a class="mode-tab active" href="/orbit.html">Orbit</a>
+          <a class="mode-tab" href="/alerts.html">Alerts</a>
+        </nav>
+      </header>
+
+      <a class="back-link" href="/orbit.html">Back to Orbit</a>
+
+      <section class="shop-detail-shell" id="shop-detail" aria-live="polite">
+        <div class="empty-brand-state">Loading shop details.</div>
+      </section>
+    </main>
+
+    <script src="pwa.js"></script>
+    <script src="shop-data.js"></script>
+    <script src="shop.js"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: lace-catalog-prototype
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
