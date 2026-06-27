@@ -72,14 +72,7 @@ uploadInput.addEventListener("change", (event) => {
   selectUploadedFile(file);
 });
 
-previewFrame.addEventListener("click", (event) => {
-  if (!event.target.closest("[data-upload-preview]")) return;
-
-  uploadInput.click();
-});
-
 bindUploadDropTarget(uploadCard, "dragging");
-bindUploadDropTarget(previewFrame, "dragging");
 
 searchButton.addEventListener("click", runCatalogSearch);
 loadMoreButton.addEventListener("click", runCatalogLoadMore);
@@ -117,10 +110,10 @@ function resetSource() {
   statusLine.textContent = "Choose a look to start.";
   querySummary.textContent = "Waiting for an image.";
   previewFrame.innerHTML = `
-    <button class="empty-preview" type="button" data-upload-preview>
+    <div class="empty-preview">
       <span aria-hidden="true">+</span>
-      <span>Select a sample or upload</span>
-    </button>
+      <span>Choose a sample or upload your photo</span>
+    </div>
   `;
 }
 
