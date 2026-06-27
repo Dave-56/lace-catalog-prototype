@@ -115,6 +115,16 @@ Action behavior:
 - Unknown shows a disabled Review action instead of direct Buy.
 - Needs check remains hidden from default view.
 
+Shopper-facing copy:
+
+- Preferred: `Part of your saved shops.`
+- Checked: `Shipping, returns, and contact info found.`
+- Reviewed: `{N} shopper reviews found.` when review count exists, otherwise `Shopper reviews found.`
+- Unknown: `Look before buying.`
+- Needs check: do not show in default product-card UI.
+
+Internal debug reasons can mention reachability, status codes, policy evidence, or mock rules. Do not show those raw reasons in product-card UI.
+
 ## Open Questions
 
 - Should users be able to expand hidden `Needs check` results?

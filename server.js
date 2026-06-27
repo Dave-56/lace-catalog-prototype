@@ -1691,6 +1691,7 @@ function getInitialSellerConfidence({ domain, productDomain, rating, preferredSh
       level: "reviewed",
       label: "Reviewed",
       reason: `${rating.count} catalog reviews. Product URL still checked before display.`,
+      reviewCount: rating.count,
       rank: 25,
       hidden: false,
     };
@@ -1720,6 +1721,7 @@ function getReachableSellerConfidence(product, reachability) {
       level: "reviewed",
       label: "Reviewed",
       reason: `Reachable product URL (${reachability.status}) plus ${product.rating.count} catalog reviews.`,
+      reviewCount: product.rating.count,
       rank: 25,
       hidden: false,
     };

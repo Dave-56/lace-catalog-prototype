@@ -11,10 +11,17 @@ const shopDetail = document.querySelector("#shop-detail");
 const params = new URLSearchParams(window.location.search);
 const requestedSource = params.get("source") || "";
 const requestedDomain = normalizeDomain(params.get("domain") || "");
+const isBuyingGuideMock = params.get("mock") === "buying-guide";
 
 loadShopDetail();
 
 async function loadShopDetail() {
+  if (isBuyingGuideMock) {
+    shopState.status = "mock";
+    renderShopDetail();
+    return;
+  }
+
   shopState.status = "loading";
   renderShopDetail();
 
@@ -94,6 +101,12 @@ async function removeShop() {
 }
 
 function renderShopDetail(message = "") {
+  if (shopState.status === "mock") {
+    shopDetail.innerHTML = renderBuyingGuideMock();
+    attachBuyingGuideInteractions();
+    return;
+  }
+
   if (shopState.status === "loading") {
     shopDetail.innerHTML = `<div class="empty-brand-state">Loading shop details.</div>`;
     return;
@@ -149,6 +162,141 @@ function renderShopDetail(message = "") {
 
   shopDetail.querySelector("[data-save-shop]")?.addEventListener("click", saveShop);
   shopDetail.querySelector("[data-remove-shop]")?.addEventListener("click", removeShop);
+}
+
+function renderBuyingGuideMock() {
+  return `
+    <section class="shop-hero simple buying-guide-hero" aria-labelledby="guide-title">
+      <div class="shop-hero-copy">
+        <p class="eyebrow">Search decision</p>
+        <h1 id="guide-title">England jersey</h1>
+        <p class="shop-domain">4 likely matches · ranked by evidence</p>
+        <p class="shop-summary">One suggested pick, with alternatives grouped by what the shopper cares about. Authenticity is only stated when there is evidence.</p>
+      </div>
+      <div class="shop-actions">
+        <button class="shop-action secondary" type="button">Refine</button>
+        <button class="shop-action" type="button">Save search</button>
+      </div>
+    </section>
+
+    <section class="buying-guide" aria-labelledby="quick-pick-title">
+      <div class="buying-guide-main">
+        <div class="guide-card top-pick">
+          <div class="guide-card-head">
+            <div>
+              <p class="eyebrow">Top pick</p>
+              <h2 id="quick-pick-title">Official retailer listing</h2>
+            </div>
+            <span class="guide-score">Highest confidence</span>
+          </div>
+          <div class="guide-product-row">
+            <div class="guide-product-thumb">ENG</div>
+            <div>
+              <h3>England Home Jersey</h3>
+              <p>Official seller evidence · Strong review count · Clear returns</p>
+            </div>
+            <strong>$95</strong>
+          </div>
+          <div class="auth-strip verified">
+            <span>Authenticity</span>
+            <strong>Seller evidence available</strong>
+          </div>
+          <div class="evidence-list">
+            <span>Sold by verified retailer</span>
+            <span>Licensing details present</span>
+            <span>Reviews mention fit and delivery</span>
+          </div>
+        </div>
+
+        <div class="guide-card proof-card">
+          <p class="eyebrow">Guardrail</p>
+          <h2>No guessing</h2>
+          <p>When proof is missing, the card says unclear. The assistant can recommend a cheaper option without calling it original.</p>
+        </div>
+      </div>
+
+      <div class="alternatives-panel" aria-labelledby="alternatives-title">
+        <div class="shop-section-head">
+          <div>
+            <p class="eyebrow">Also consider</p>
+            <h2 id="alternatives-title">By priority</h2>
+          </div>
+          <span>Not best to worst</span>
+        </div>
+
+        <div class="alternative-tabs" role="tablist" aria-label="Alternative priorities">
+          <button class="active" type="button" data-guide-tab="value">Value</button>
+          <button type="button" data-guide-tab="speed">Speed</button>
+          <button type="button" data-guide-tab="official">Official</button>
+        </div>
+
+        <div class="alternative-list">
+          ${renderAlternativeCard({
+            id: "value",
+            title: "Best value",
+            product: "Fan-style England Jersey",
+            meta: "Lower price · Good review volume",
+            price: "$42",
+            authenticity: "Not verified",
+            tone: "unclear",
+            note: "Good budget option, but do not present as official.",
+          })}
+          ${renderAlternativeCard({
+            id: "speed",
+            title: "Fastest delivery",
+            product: "England Jersey - Ships from US",
+            meta: "Arrives sooner · Seller history available",
+            price: "$68",
+            authenticity: "Unclear",
+            tone: "unclear",
+            note: "Use when timing matters more than official proof.",
+          })}
+          ${renderAlternativeCard({
+            id: "official",
+            title: "Safest official route",
+            product: "Licensed England Match Jersey",
+            meta: "Verified retailer · Higher price",
+            price: "$130",
+            authenticity: "Seller evidence available",
+            tone: "verified",
+            note: "Best if originality is the deciding factor.",
+          })}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderAlternativeCard(option) {
+  return `
+    <article class="alternative-card ${option.id === "value" ? "active" : ""}" data-guide-card="${escapeAttribute(option.id)}">
+      <div>
+        <span>${escapeHtml(option.title)}</span>
+        <h3>${escapeHtml(option.product)}</h3>
+        <p>${escapeHtml(option.meta)}</p>
+      </div>
+      <strong>${escapeHtml(option.price)}</strong>
+      <div class="auth-strip ${escapeAttribute(option.tone)}">
+        <span>Authenticity</span>
+        <strong>${escapeHtml(option.authenticity)}</strong>
+      </div>
+      <p class="alternative-note">${escapeHtml(option.note)}</p>
+    </article>
+  `;
+}
+
+function attachBuyingGuideInteractions() {
+  const tabs = shopDetail.querySelectorAll("[data-guide-tab]");
+  const cards = shopDetail.querySelectorAll("[data-guide-card]");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const selected = tab.dataset.guideTab;
+
+      tabs.forEach((item) => item.classList.toggle("active", item === tab));
+      cards.forEach((card) => card.classList.toggle("active", card.dataset.guideCard === selected));
+    });
+  });
 }
 
 function renderLatestProductsPanel(products, latestProductsUrl) {

@@ -615,7 +615,7 @@ function renderProductCard(product) {
   const confidence = product.sellerConfidence || {};
   const confidenceBadge = confidence.label
     ? `<span class="confidence-badge ${escapeAttribute(confidence.level || "unknown")}" title="${escapeAttribute(
-        confidence.reason || "Seller confidence is not checked yet.",
+        getConfidenceHelpText(confidence),
       )}">${escapeHtml(confidence.label)}</span>`
     : "";
   const viewLink = url
@@ -659,6 +659,18 @@ function renderProductCard(product) {
 
 function canBuyDirectly(product) {
   return new Set(["preferred", "checked", "reviewed"]).has(product.sellerConfidence?.level);
+}
+
+function getConfidenceHelpText(confidence) {
+  const reviewCount = Number(confidence.reviewCount || confidence.ratingCount || 0);
+  const helpText = {
+    preferred: "Part of your saved shops.",
+    checked: "Shipping, returns, and contact info found.",
+    reviewed: reviewCount > 0 ? `${reviewCount} shopper reviews found.` : "Shopper reviews found.",
+    unknown: "Look before buying.",
+  };
+
+  return helpText[confidence.level] || "Seller details still need a look.";
 }
 
 function escapeHtml(value) {
