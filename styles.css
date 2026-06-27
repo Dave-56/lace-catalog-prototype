@@ -157,7 +157,7 @@ h1 {
 
 .look-rail {
   display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 210px));
+  grid-template-columns: repeat(6, minmax(118px, 190px));
   justify-content: center;
   align-items: center;
   gap: 0;
@@ -243,6 +243,10 @@ h1 {
   transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
+.camera-card {
+  transform: translateX(-48px) rotate(3deg);
+}
+
 .upload-card:hover,
 .upload-card:focus-within,
 .upload-card.dragging {
@@ -250,6 +254,11 @@ h1 {
   border-color: var(--accent);
   background-color: var(--paper-strong);
   transform: translateX(-28px) translateY(-8px);
+}
+
+.camera-card:hover,
+.camera-card:focus-within {
+  transform: translateX(-48px) translateY(-8px) rotate(0deg);
 }
 
 .upload-card input {
@@ -1664,6 +1673,7 @@ h1 {
 
   .look-card,
   .upload-card,
+  .camera-card,
   .tilt-left,
   .tilt-right,
   .tilt-left-soft,

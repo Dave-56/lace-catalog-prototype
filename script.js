@@ -48,6 +48,7 @@ const searchButton = document.querySelector("#search-button");
 const loadMoreButton = document.querySelector("#load-more-button");
 const clearButton = document.querySelector("#clear-button");
 const uploadInput = document.querySelector("#image-upload");
+const cameraInput = document.querySelector("#camera-capture");
 const uploadCard = document.querySelector(".upload-card");
 
 document.querySelectorAll("[data-sample]").forEach((button) => {
@@ -69,7 +70,14 @@ uploadInput.addEventListener("change", (event) => {
   const [file] = event.target.files;
   if (!file) return;
 
-  selectUploadedFile(file);
+  selectUploadedFile(file, { source: "upload" });
+});
+
+cameraInput.addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  selectUploadedFile(file, { source: "camera" });
 });
 
 bindUploadDropTarget(uploadCard, "dragging");
@@ -106,6 +114,7 @@ function resetSource() {
   state.previewImage = null;
   state.uploadedFileName = "";
   uploadInput.value = "";
+  cameraInput.value = "";
   searchButton.disabled = true;
   statusLine.textContent = "Choose a look to start.";
   querySummary.textContent = "Waiting for an image.";
@@ -125,15 +134,16 @@ function scrollSelectedLookIntoView() {
   });
 }
 
-function selectUploadedFile(file) {
+function selectUploadedFile(file, options = {}) {
   if (!file || !file.type.startsWith("image/")) return;
 
   const src = URL.createObjectURL(file);
-  state.uploadedFileName = file.name;
+  const isCamera = options.source === "camera";
+  state.uploadedFileName = isCamera ? "Camera photo" : file.name;
   selectSource({
     kind: "upload",
-    key: "upload",
-    label: "uploaded photo",
+    key: isCamera ? "camera" : "upload",
+    label: isCamera ? "camera photo" : "uploaded photo",
     src,
     intent: "fashion clothing and accessories",
   });
@@ -156,7 +166,7 @@ function bindUploadDropTarget(target, draggingClass) {
 
   target.addEventListener("drop", (event) => {
     const [file] = event.dataTransfer.files;
-    selectUploadedFile(file);
+    selectUploadedFile(file, { source: "upload" });
   });
 }
 

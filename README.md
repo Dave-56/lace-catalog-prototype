@@ -10,7 +10,7 @@ Run the live Catalog prototype with:
 npm run start
 ```
 
-Then open `http://localhost:3000`. Pick or upload a look, drag over one item, and press Search. The frontend calls `POST /api/catalog-search`, which proxies the selected image crop to Shopify Global Catalog `search_catalog` using `catalog.like`.
+Then open `http://localhost:3000`. Pick, take, or upload a look, drag over one item, and press Search. The frontend calls `POST /api/catalog-search`, which proxies the selected image crop to Shopify Global Catalog `search_catalog` using `catalog.like`.
 
 To test Gemini query enhancement, add a key to `.env`:
 
