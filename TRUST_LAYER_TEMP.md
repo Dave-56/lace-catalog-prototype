@@ -61,7 +61,7 @@ Important:
    - Reachable product URLs become Checked.
    - Failed product URLs become hidden Needs check.
    - Catalog rating count can become Reviewed after reachability passes.
-   - Show confidence badges on cards.
+   - Show shopper-facing evidence chips on cards.
    - Sort safer sellers first.
    - Filter hidden `Needs check` sellers from default results.
 
@@ -115,15 +115,23 @@ Action behavior:
 - Unknown shows a disabled Review action instead of direct Buy.
 - Needs check remains hidden from default view.
 
-Shopper-facing copy:
+Shopper-facing card evidence:
 
-- Preferred: `Part of your saved shops.`
-- Checked: `Shipping, returns, and contact info found.`
-- Reviewed: `{N} shopper reviews found.` when review count exists, otherwise `Shopper reviews found.`
-- Unknown: `Look before buying.`
+- Do not make the primary UI say abstract labels like `Checked` or `Reviewed`.
+- Show the evidence consumers actually care about:
+  - `24 reviews`
+  - `0 reviews`
+  - `30-day returns`
+  - `Support found`
+  - `Shipping details`
+  - `Ships from US`
+  - `Saved shop`
+  - `Look before buying`
+- For now, returns/contact/shipping evidence is mocked in the frontend to test product UX.
+- Tooltips can show one-line details, for example `Returns accepted within 30 days.`
 - Needs check: do not show in default product-card UI.
 
-Internal debug reasons can mention reachability, status codes, policy evidence, or mock rules. Do not show those raw reasons in product-card UI.
+Internal debug reasons can mention reachability, status codes, confidence levels, policy evidence, or mock rules. Do not show those raw reasons in product-card UI.
 
 ## Open Questions
 

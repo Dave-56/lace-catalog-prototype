@@ -11,7 +11,7 @@ const shopDetail = document.querySelector("#shop-detail");
 const params = new URLSearchParams(window.location.search);
 const requestedSource = params.get("source") || "";
 const requestedDomain = normalizeDomain(params.get("domain") || "");
-const isBuyingGuideMock = params.get("mock") === "buying-guide";
+const isBuyingGuideMock = params.get("mock") === "buying-guide" || Boolean(window.LACE_BUYING_GUIDE_PAGE);
 
 loadShopDetail();
 
@@ -162,106 +162,87 @@ function renderShopDetail(message = "") {
 
   shopDetail.querySelector("[data-save-shop]")?.addEventListener("click", saveShop);
   shopDetail.querySelector("[data-remove-shop]")?.addEventListener("click", removeShop);
+  attachLatestProductImageSwaps();
 }
 
 function renderBuyingGuideMock() {
   return `
-    <section class="shop-hero simple buying-guide-hero" aria-labelledby="guide-title">
-      <div class="shop-hero-copy">
-        <p class="eyebrow">Search decision</p>
-        <h1 id="guide-title">England jersey</h1>
-        <p class="shop-domain">4 likely matches · ranked by evidence</p>
-        <p class="shop-summary">One suggested pick, with alternatives grouped by what the shopper cares about. Authenticity is only stated when there is evidence.</p>
-      </div>
-      <div class="shop-actions">
-        <button class="shop-action secondary" type="button">Refine</button>
-        <button class="shop-action" type="button">Save search</button>
-      </div>
-    </section>
+    <section class="search-guide" aria-labelledby="guide-title">
+      <form class="consumer-search" aria-label="Product search">
+        <div class="consumer-search-box">
+          <input id="mock-search-input" type="search" value="England jersey" aria-label="Search products" />
+          <button type="submit">Search</button>
+        </div>
+      </form>
 
-    <section class="buying-guide" aria-labelledby="quick-pick-title">
-      <div class="buying-guide-main">
-        <div class="guide-card top-pick">
-          <div class="guide-card-head">
-            <div>
-              <p class="eyebrow">Top pick</p>
-              <h2 id="quick-pick-title">Official retailer listing</h2>
-            </div>
-            <span class="guide-score">Highest confidence</span>
+      <p class="search-loading" data-search-loading hidden>Checking options, sellers, and reviews...</p>
+
+      <div class="search-results" data-search-results hidden>
+      <div class="quick-answer">
+        <div class="quick-answer-copy">
+          <p class="soft-label">Recommended for you</p>
+          <h1 id="guide-title">England Home Jersey</h1>
+          <p class="plain-summary">Best pick if you want a verified retailer and easy returns.</p>
+
+          <div class="simple-signals" aria-label="Why this was recommended">
+            <span>Verified retailer</span>
+            <span>Clear returns</span>
+            <span>Strong reviews</span>
           </div>
-          <div class="guide-product-row">
-            <div class="guide-product-thumb">ENG</div>
-            <div>
-              <h3>England Home Jersey</h3>
-              <p>Official seller evidence · Strong review count · Clear returns</p>
-            </div>
-            <strong>$95</strong>
-          </div>
-          <div class="auth-strip verified">
+
+          <div class="simple-auth verified">
             <span>Authenticity</span>
-            <strong>Seller evidence available</strong>
+            <strong>Seller evidence found</strong>
           </div>
-          <div class="evidence-list">
-            <span>Sold by verified retailer</span>
-            <span>Licensing details present</span>
-            <span>Reviews mention fit and delivery</span>
+
+          <div class="consumer-actions">
+            <button class="primary-button" type="button">View product</button>
+            <button class="quiet-button" type="button">Save</button>
           </div>
         </div>
 
-        <div class="guide-card proof-card">
-          <p class="eyebrow">Guardrail</p>
-          <h2>No guessing</h2>
-          <p>When proof is missing, the card says unclear. The assistant can recommend a cheaper option without calling it original.</p>
+        <div class="quick-product">
+          <div class="consumer-product-thumb">ENG</div>
+          <div>
+          <span class="price">$95</span>
+            <p>Seller evidence found</p>
+          </div>
         </div>
       </div>
 
-      <div class="alternatives-panel" aria-labelledby="alternatives-title">
-        <div class="shop-section-head">
-          <div>
-            <p class="eyebrow">Also consider</p>
-            <h2 id="alternatives-title">By priority</h2>
-          </div>
-          <span>Not best to worst</span>
-        </div>
+      <section class="simple-alternatives" aria-labelledby="alternatives-title">
+        <h2 id="alternatives-title">Other good options</h2>
 
-        <div class="alternative-tabs" role="tablist" aria-label="Alternative priorities">
-          <button class="active" type="button" data-guide-tab="value">Value</button>
-          <button type="button" data-guide-tab="speed">Speed</button>
-          <button type="button" data-guide-tab="official">Official</button>
-        </div>
-
-        <div class="alternative-list">
           ${renderAlternativeCard({
             id: "value",
-            title: "Best value",
+            title: "Cheaper",
             product: "Fan-style England Jersey",
-            meta: "Lower price · Good review volume",
+            meta: "Good budget option",
             price: "$42",
             authenticity: "Not verified",
             tone: "unclear",
-            note: "Good budget option, but do not present as official.",
           })}
           ${renderAlternativeCard({
             id: "speed",
-            title: "Fastest delivery",
+            title: "Arrives sooner",
             product: "England Jersey - Ships from US",
-            meta: "Arrives sooner · Seller history available",
+            meta: "Best if timing matters",
             price: "$68",
             authenticity: "Unclear",
             tone: "unclear",
-            note: "Use when timing matters more than official proof.",
           })}
           ${renderAlternativeCard({
             id: "official",
-            title: "Safest official route",
+            title: "Most official",
             product: "Licensed England Match Jersey",
-            meta: "Verified retailer · Higher price",
+            meta: "Verified retailer, higher price",
             price: "$130",
-            authenticity: "Seller evidence available",
+            authenticity: "Evidence found",
             tone: "verified",
-            note: "Best if originality is the deciding factor.",
           })}
-        </div>
+
+        <p class="search-note">We only say official when seller or licensing evidence is present.</p>
+      </section>
       </div>
     </section>
   `;
@@ -269,33 +250,39 @@ function renderBuyingGuideMock() {
 
 function renderAlternativeCard(option) {
   return `
-    <article class="alternative-card ${option.id === "value" ? "active" : ""}" data-guide-card="${escapeAttribute(option.id)}">
+    <article class="alternative-card ${escapeAttribute(option.tone)}" data-guide-card="${escapeAttribute(option.id)}">
       <div>
         <span>${escapeHtml(option.title)}</span>
         <h3>${escapeHtml(option.product)}</h3>
         <p>${escapeHtml(option.meta)}</p>
       </div>
       <strong>${escapeHtml(option.price)}</strong>
-      <div class="auth-strip ${escapeAttribute(option.tone)}">
-        <span>Authenticity</span>
-        <strong>${escapeHtml(option.authenticity)}</strong>
-      </div>
-      <p class="alternative-note">${escapeHtml(option.note)}</p>
+      <small>${escapeHtml(option.authenticity)}</small>
     </article>
   `;
 }
 
 function attachBuyingGuideInteractions() {
-  const tabs = shopDetail.querySelectorAll("[data-guide-tab]");
-  const cards = shopDetail.querySelectorAll("[data-guide-card]");
+  const form = shopDetail.querySelector(".consumer-search");
+  const input = shopDetail.querySelector("#mock-search-input");
+  const loading = shopDetail.querySelector("[data-search-loading]");
+  const results = shopDetail.querySelector("[data-search-results]");
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const selected = tab.dataset.guideTab;
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-      tabs.forEach((item) => item.classList.toggle("active", item === tab));
-      cards.forEach((card) => card.classList.toggle("active", card.dataset.guideCard === selected));
-    });
+    if (!input.value.trim()) {
+      input.value = "England jersey";
+    }
+
+    results.hidden = true;
+    loading.hidden = false;
+
+    window.setTimeout(() => {
+      loading.hidden = true;
+      results.hidden = false;
+      results.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 450);
   });
 }
 
@@ -325,8 +312,10 @@ function getShopDetailSummary(profile) {
 }
 
 function renderLatestProduct(product) {
-  const image = product.image
-    ? `<img alt="${escapeAttribute(product.title)}" src="${escapeAttribute(product.image)}" />`
+  const images = getProductImages(product);
+  const primaryImage = images[0];
+  const image = primaryImage
+    ? renderProductMedia(product, images, primaryImage)
     : `<div class="product-image-empty">No image</div>`;
   const link = product.url
     ? `<a class="product-link" href="${escapeAttribute(product.url)}" target="_blank" rel="noreferrer">View</a>`
@@ -348,6 +337,85 @@ function renderLatestProduct(product) {
       </div>
     </article>
   `;
+}
+
+function renderProductMedia(product, images, primaryImage) {
+  const title = product.title || "Product image";
+  const thumbs = images.length > 1
+    ? `
+      <div class="product-image-thumbs" aria-label="${escapeAttribute(`${title} photos`)}">
+        ${images
+          .slice(0, 5)
+          .map((image, index) => renderProductImageThumb(image, title, index === 0))
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <div class="product-media">
+      <img class="product-main-image" alt="${escapeAttribute(primaryImage.alt || title)}" src="${escapeAttribute(
+        primaryImage.url,
+      )}" loading="lazy" />
+      ${thumbs}
+    </div>
+  `;
+}
+
+function renderProductImageThumb(image, title, isActive) {
+  return `
+    <button class="product-image-thumb ${isActive ? "active" : ""}" type="button" data-product-image-src="${escapeAttribute(
+      image.url,
+    )}" data-product-image-alt="${escapeAttribute(image.alt || title)}" aria-label="${escapeAttribute(
+      image.kind === "model" ? "Show model photo" : `Show product photo ${image.position + 1}`,
+    )}">
+      <img alt="" src="${escapeAttribute(image.url)}" loading="lazy" />
+    </button>
+  `;
+}
+
+function attachLatestProductImageSwaps() {
+  shopDetail.querySelectorAll("[data-product-image-src]").forEach((button) => {
+    const swapImage = () => {
+      const card = button.closest(".product-card");
+      const mainImage = card?.querySelector(".product-main-image");
+
+      if (!mainImage) return;
+
+      mainImage.src = button.dataset.productImageSrc;
+      mainImage.alt = button.dataset.productImageAlt || mainImage.alt;
+      card.querySelectorAll("[data-product-image-src]").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+    };
+
+    button.addEventListener("click", swapImage);
+    button.addEventListener("mouseenter", swapImage);
+  });
+}
+
+function getProductImages(product) {
+  const images = Array.isArray(product.images) ? product.images : [];
+  const normalized = images
+    .map((image, index) => {
+      if (typeof image === "string") {
+        return { url: image, alt: "", kind: "unknown", position: index };
+      }
+
+      return {
+        url: image?.url || "",
+        alt: image?.alt || "",
+        kind: image?.kind || "unknown",
+        position: Number.isFinite(Number(image?.position)) ? Number(image.position) : index,
+      };
+    })
+    .filter((image) => image.url);
+
+  if (!normalized.length && product.image) {
+    normalized.push({ url: product.image, alt: product.title || "", kind: "unknown", position: 0 });
+  }
+
+  return normalized;
 }
 
 function findRequestedShop(sources) {

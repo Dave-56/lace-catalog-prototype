@@ -2,6 +2,7 @@ const CACHE_NAME = "lace-demo-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
+  "/search.html",
   "/orbit.html",
   "/alerts.html",
   "/shop.html",

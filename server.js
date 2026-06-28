@@ -673,13 +673,15 @@ function normalizeShopProduct(product, origin) {
 
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const firstAvailableVariant = variants.find((variant) => variant.available !== false) || variants[0] || {};
-  const image = findShopProductImage(product, firstAvailableVariant);
+  const images = collectShopProductImages(product, firstAvailableVariant);
+  const primaryImage = choosePrimaryShopProductImage(images);
   const price = cleanText(firstAvailableVariant.price || product.variants?.[0]?.price);
 
   return {
     id: cleanText(product.id || handle),
     title,
-    image,
+    image: primaryImage?.url || "",
+    images,
     price: price ? formatShopProductPrice(price) : "Price varies",
     url: new URL(`/products/${handle}`, origin).toString(),
     publishedAt: cleanText(product.published_at || product.created_at),
@@ -696,20 +698,85 @@ function getTimeValue(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
-function findShopProductImage(product, variant) {
-  const candidates = [
+function collectShopProductImages(product, variant) {
+  const rawImages = [
     product.featured_image,
-    Array.isArray(product.images) ? product.images[0] : null,
+    ...(Array.isArray(product.images) ? product.images : []),
     variant.featured_image,
   ];
+  const seen = new Set();
 
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    if (typeof candidate === "string") return candidate.startsWith("//") ? `https:${candidate}` : candidate;
-    if (candidate.src) return candidate.src.startsWith("//") ? `https:${candidate.src}` : candidate.src;
+  return rawImages
+    .map((image, index) => normalizeShopProductImage(image, variant, index))
+    .filter(Boolean)
+    .filter((image) => {
+      const key = normalizeUrlKey(image.url);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((image) => ({
+      ...image,
+      kind: classifyShopProductImage(image),
+    }))
+    .sort(compareShopProductImages);
+}
+
+function normalizeShopProductImage(image, variant, index) {
+  if (!image) return null;
+
+  if (typeof image === "string") {
+    const url = normalizeImageUrl(image);
+    return url
+      ? {
+          url,
+          alt: "",
+          position: index,
+          variantMatch: false,
+        }
+      : null;
   }
 
-  return "";
+  const url = normalizeImageUrl(image.src || image.url || image.image || image.preview_image?.src);
+  if (!url) return null;
+
+  const variantIds = Array.isArray(image.variant_ids) ? image.variant_ids.map(String) : [];
+  const variantId = cleanText(variant?.id);
+
+  return {
+    url,
+    alt: cleanText(image.alt || image.alt_text),
+    position: Number.isFinite(Number(image.position)) ? Number(image.position) : index,
+    variantMatch: Boolean(variantId && variantIds.includes(variantId)),
+  };
+}
+
+function normalizeImageUrl(value) {
+  const url = cleanUrl(value);
+  if (!url) return "";
+
+  return url.startsWith("//") ? `https:${url}` : url;
+}
+
+function choosePrimaryShopProductImage(images) {
+  return images.find((image) => image.kind === "model") || images[0] || null;
+}
+
+function compareShopProductImages(a, b) {
+  const rank = { model: 0, lifestyle: 1, product: 2, flatlay: 3, unknown: 4 };
+  const variantDelta = Number(b.variantMatch) - Number(a.variantMatch);
+
+  return variantDelta || (rank[a.kind] ?? 4) - (rank[b.kind] ?? 4) || a.position - b.position;
+}
+
+function classifyShopProductImage(image) {
+  const text = `${image.alt || ""} ${image.url || ""}`.toLowerCase();
+
+  if (/on[-_ ]?model|onmodel|on[-_ ]?body|onbody|\b(model|worn|wearing|styled|fit pic|lookbook)\b/.test(text)) return "model";
+  if (/\b(lifestyle|editorial|campaign|outfit)\b/.test(text)) return "lifestyle";
+  if (/\b(flat[-_ ]?lay|laydown|ghost|packshot|product[-_ ]?shot|front|back|detail)\b/.test(text)) return "flatlay";
+
+  return "unknown";
 }
 
 function formatShopProductPrice(value) {

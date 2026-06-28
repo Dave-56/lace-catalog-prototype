@@ -5,6 +5,7 @@ const alertSections = [
 
 const alertState = {
   alerts: [],
+  collapsedSections: {},
   status: "loading",
   error: "",
 };
@@ -13,8 +14,16 @@ const alertInbox = document.querySelector("#alert-inbox");
 const alertsCount = document.querySelector("#alerts-count");
 
 alertInbox.addEventListener("click", async (event) => {
+  const sectionToggle = event.target.closest("[data-toggle-alert-section]");
   const dismissButton = event.target.closest("[data-dismiss-alert]");
   const readLink = event.target.closest("[data-read-alert]");
+
+  if (sectionToggle) {
+    const sectionId = sectionToggle.dataset.toggleAlertSection;
+    alertState.collapsedSections[sectionId] = !alertState.collapsedSections[sectionId];
+    renderAlerts();
+    return;
+  }
 
   if (dismissButton) {
     await patchAlert(dismissButton.dataset.dismissAlert, { dismissed: true });
@@ -117,13 +126,27 @@ function renderSection(section, activeAlerts) {
 
   if (sectionAlerts.length === 0) return "";
 
+  const collapsed = Boolean(alertState.collapsedSections[section.id]);
+  const listId = `alert-section-${section.id}-list`;
+
   return `
     <section class="alert-section" aria-label="${escapeAttribute(section.label)}">
       <div class="alert-section-head">
-        <h3>${escapeHtml(section.label)}</h3>
-        <span>${sectionAlerts.length}</span>
+        <h3>
+          <button
+            type="button"
+            class="alert-section-toggle"
+            data-toggle-alert-section="${escapeAttribute(section.id)}"
+            aria-expanded="${collapsed ? "false" : "true"}"
+            aria-controls="${escapeAttribute(listId)}"
+          >
+            <span class="alert-section-chevron" aria-hidden="true"></span>
+            <span>${escapeHtml(section.label)}</span>
+          </button>
+        </h3>
+        <span class="alert-section-count">${sectionAlerts.length}</span>
       </div>
-      <div class="alert-list">
+      <div class="alert-list" id="${escapeAttribute(listId)}" ${collapsed ? "hidden" : ""}>
         ${sectionAlerts.map(renderAlertRow).join("")}
       </div>
     </section>

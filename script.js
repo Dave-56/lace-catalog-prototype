@@ -656,11 +656,7 @@ function renderProductCard(product) {
     ? `<img alt="${escapeAttribute(product.title)}" src="${escapeAttribute(product.image)}" />`
     : `<div class="product-image-empty">No image</div>`;
   const confidence = product.sellerConfidence || {};
-  const confidenceBadge = confidence.label
-    ? `<span class="confidence-badge ${escapeAttribute(confidence.level || "unknown")}" title="${escapeAttribute(
-        getConfidenceHelpText(confidence),
-      )}">${escapeHtml(confidence.label)}</span>`
-    : "";
+  const trustEvidence = renderTrustEvidence(product, confidence);
   const viewLink = url
     ? `<a class="product-link" href="${url}" target="_blank" rel="noreferrer">View</a>`
     : `<span class="product-link disabled">No page</span>`;
@@ -685,7 +681,7 @@ function renderProductCard(product) {
           <span>${escapeHtml(product.matchLabel || "Catalog match")}</span>
           <span>${escapeHtml(product.merchant || "Shopify merchant")}</span>
         </div>
-        ${confidenceBadge}
+        ${trustEvidence}
         <h3>${escapeHtml(product.title)}</h3>
         <div class="price-row">
           <span class="price">${escapeHtml(product.price || "Price varies")}</span>
@@ -704,16 +700,141 @@ function canBuyDirectly(product) {
   return new Set(["preferred", "checked", "reviewed"]).has(product.sellerConfidence?.level);
 }
 
-function getConfidenceHelpText(confidence) {
-  const reviewCount = Number(confidence.reviewCount || confidence.ratingCount || 0);
-  const helpText = {
-    preferred: "Part of your saved shops.",
-    checked: "Shipping, returns, and contact info found.",
-    reviewed: reviewCount > 0 ? `${reviewCount} shopper reviews found.` : "Shopper reviews found.",
-    unknown: "Look before buying.",
-  };
+function renderTrustEvidence(product, confidence = {}) {
+  const evidence = getMockTrustEvidence(product, confidence);
+  if (!evidence.length) return "";
 
-  return helpText[confidence.level] || "Seller details still need a look.";
+  const chips = evidence
+    .map(
+      (item) => `
+        <span class="trust-chip ${escapeAttribute(item.kind || "info")}" title="${escapeAttribute(item.detail)}">
+          ${escapeHtml(item.label)}
+        </span>
+      `,
+    )
+    .join("");
+
+  return `<div class="trust-evidence" aria-label="Shop evidence">${chips}</div>`;
+}
+
+function getMockTrustEvidence(product, confidence = {}) {
+  const level = confidence.level || "unknown";
+
+  if (level === "unknown") {
+    return [
+      {
+        kind: "caution",
+        label: "Look before buying",
+        detail: "Seller details still need a look.",
+      },
+    ];
+  }
+
+  const evidence = [];
+  const reviewCount = Number(confidence.reviewCount || confidence.ratingCount || product.rating?.count || 0);
+
+  if (level === "preferred") {
+    evidence.push({
+      kind: "preferred",
+      label: "Saved shop",
+      detail: "Part of your saved shops.",
+    });
+  }
+
+  evidence.push({
+    kind: reviewCount > 0 ? "review" : "muted",
+    label: `${reviewCount} reviews`,
+    detail: reviewCount > 0 ? `${reviewCount} shopper reviews found.` : "No shopper reviews found yet.",
+  });
+
+  return evidence.concat(getMockPolicyEvidence(product));
+}
+
+function getMockPolicyEvidence(product) {
+  const profiles = [
+    [
+      {
+        kind: "policy",
+        label: "30-day returns",
+        detail: "Mock policy: returns accepted within 30 days.",
+      },
+      {
+        kind: "policy",
+        label: "Support found",
+        detail: "Mock policy: support email or contact form found.",
+      },
+      {
+        kind: "policy",
+        label: "Ships from US",
+        detail: "Mock policy: shipping page mentions US delivery.",
+      },
+    ],
+    [
+      {
+        kind: "policy",
+        label: "14-day returns",
+        detail: "Mock policy: returns accepted within 14 days.",
+      },
+      {
+        kind: "policy",
+        label: "Support email",
+        detail: "Mock policy: customer support email found.",
+      },
+      {
+        kind: "policy",
+        label: "Shipping found",
+        detail: "Mock policy: shipping policy page found.",
+      },
+    ],
+    [
+      {
+        kind: "policy",
+        label: "Returns found",
+        detail: "Mock policy: return/refund language found, exact window unknown.",
+      },
+      {
+        kind: "policy",
+        label: "Support found",
+        detail: "Mock policy: contact page found.",
+      },
+      {
+        kind: "policy",
+        label: "Shipping details",
+        detail: "Mock policy: delivery timing or region information found.",
+      },
+    ],
+    [
+      {
+        kind: "caution",
+        label: "Exchange only",
+        detail: "Mock policy: return terms look limited to exchanges or store credit.",
+      },
+      {
+        kind: "policy",
+        label: "Support found",
+        detail: "Mock policy: support path found.",
+      },
+      {
+        kind: "policy",
+        label: "Shipping found",
+        detail: "Mock policy: shipping policy page found.",
+      },
+    ],
+  ];
+
+  const seed = `${product.merchant || ""}|${product.url || ""}|${product.title || ""}`;
+  return profiles[hashString(seed) % profiles.length];
+}
+
+function hashString(value) {
+  const text = String(value ?? "");
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
 }
 
 function escapeHtml(value) {
