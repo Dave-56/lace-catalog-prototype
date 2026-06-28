@@ -195,17 +195,17 @@ function renderBuyingGuideMock() {
             <strong>Seller evidence found</strong>
           </div>
 
+          <div class="quick-product">
+            <div class="consumer-product-thumb">ENG</div>
+            <div>
+              <span class="price">$95</span>
+              <p>Seller evidence found</p>
+            </div>
+          </div>
+
           <div class="consumer-actions">
             <button class="primary-button" type="button">View product</button>
-            <button class="quiet-button" type="button">Save</button>
-          </div>
-        </div>
-
-        <div class="quick-product">
-          <div class="consumer-product-thumb">ENG</div>
-          <div>
-          <span class="price">$95</span>
-            <p>Seller evidence found</p>
+            <button class="quiet-button" type="button">Watch</button>
           </div>
         </div>
       </div>
@@ -251,6 +251,7 @@ function renderBuyingGuideMock() {
 function renderAlternativeCard(option) {
   return `
     <article class="alternative-card ${escapeAttribute(option.tone)}" data-guide-card="${escapeAttribute(option.id)}">
+      <div class="alternative-thumb">ENG</div>
       <div>
         <span>${escapeHtml(option.title)}</span>
         <h3>${escapeHtml(option.product)}</h3>
