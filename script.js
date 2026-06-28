@@ -126,7 +126,6 @@ function resetSource() {
   querySummary.textContent = "Waiting for an image.";
   previewFrame.innerHTML = `
     <div class="empty-preview">
-      <span aria-hidden="true">L</span>
       <span>Selected look will appear here</span>
     </div>
   `;
