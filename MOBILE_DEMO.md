@@ -8,7 +8,7 @@ LACE should stay as one responsive web app for this pass. There is no separate `
 2. Set `GEMINI_API_KEY` in the host environment.
 3. Open the HTTPS URL in Safari on iPhone.
 4. Use Share -> Add to Home Screen.
-5. Launch LACE from the Home Screen and run: Take a pic -> crop -> Search -> Watch -> Orbit -> Alerts.
+5. Launch LACE from the Home Screen and run: Start with a photo -> Take a pic -> crop -> Search -> Watch -> Orbit -> Alerts.
 
 ## Render Setup
 

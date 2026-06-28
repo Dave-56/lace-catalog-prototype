@@ -49,7 +49,9 @@ const loadMoreButton = document.querySelector("#load-more-button");
 const clearButton = document.querySelector("#clear-button");
 const uploadInput = document.querySelector("#image-upload");
 const cameraInput = document.querySelector("#camera-capture");
-const uploadCard = document.querySelector(".upload-card");
+const uploadCard = document.querySelector("#photo-picker-button");
+const photoSheet = document.querySelector("#photo-sheet");
+const photoSheetCancel = document.querySelector("#photo-sheet-cancel");
 
 document.querySelectorAll("[data-sample]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -82,6 +84,10 @@ cameraInput.addEventListener("change", (event) => {
 
 bindUploadDropTarget(uploadCard, "dragging");
 
+uploadCard.addEventListener("click", openPhotoSheet);
+photoSheetCancel.addEventListener("click", closePhotoSheet);
+photoSheet.addEventListener("click", handlePhotoSheetClick);
+document.addEventListener("keydown", handlePhotoSheetKeydown);
 searchButton.addEventListener("click", runCatalogSearch);
 loadMoreButton.addEventListener("click", runCatalogLoadMore);
 clearButton.addEventListener("click", resetSource);
@@ -137,6 +143,7 @@ function scrollSelectedLookIntoView() {
 function selectUploadedFile(file, options = {}) {
   if (!file || !file.type.startsWith("image/")) return;
 
+  closePhotoSheet();
   const src = URL.createObjectURL(file);
   const isCamera = options.source === "camera";
   state.uploadedFileName = isCamera ? "Camera photo" : file.name;
@@ -147,6 +154,43 @@ function selectUploadedFile(file, options = {}) {
     src,
     intent: "fashion clothing and accessories",
   });
+}
+
+function openPhotoSheet() {
+  photoSheet.hidden = false;
+  document.body.classList.add("has-photo-sheet");
+}
+
+function closePhotoSheet() {
+  photoSheet.hidden = true;
+  document.body.classList.remove("has-photo-sheet");
+}
+
+function handlePhotoSheetClick(event) {
+  const sourceButton = event.target.closest("[data-photo-source]");
+
+  if (sourceButton) {
+    closePhotoSheet();
+
+    if (sourceButton.dataset.photoSource === "camera") {
+      cameraInput.value = "";
+      cameraInput.click();
+    } else {
+      uploadInput.value = "";
+      uploadInput.click();
+    }
+    return;
+  }
+
+  if (event.target === photoSheet) {
+    closePhotoSheet();
+  }
+}
+
+function handlePhotoSheetKeydown(event) {
+  if (event.key === "Escape" && !photoSheet.hidden) {
+    closePhotoSheet();
+  }
 }
 
 function bindUploadDropTarget(target, draggingClass) {

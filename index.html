@@ -86,17 +86,25 @@
             <span>evening</span>
           </button>
 
-          <label class="upload-card" for="image-upload" aria-label="Upload a photo">
-            <input id="image-upload" type="file" accept="image/*" />
+          <button class="upload-card" id="photo-picker-button" type="button" aria-haspopup="dialog">
             <span class="upload-plus" aria-hidden="true">+</span>
-            <span class="upload-text">Upload<br />your photo</span>
-          </label>
+            <span class="upload-title">Start with a photo</span>
+            <span class="upload-text">Take a pic or choose a photo</span>
+          </button>
+          <input class="photo-input" id="image-upload" type="file" accept="image/*" />
+          <input class="photo-input" id="camera-capture" type="file" accept="image/*" capture="environment" />
+        </div>
 
-          <label class="upload-card camera-card" for="camera-capture" aria-label="Take a photo">
-            <input id="camera-capture" type="file" accept="image/*" capture="environment" />
-            <span class="upload-plus" aria-hidden="true">+</span>
-            <span class="upload-text">Take<br />a pic</span>
-          </label>
+        <div class="photo-sheet-backdrop" id="photo-sheet" hidden>
+          <div class="photo-sheet" role="dialog" aria-modal="true" aria-labelledby="photo-sheet-title">
+            <div>
+              <p class="eyebrow">Photo source</p>
+              <h2 id="photo-sheet-title">Start with a photo</h2>
+            </div>
+            <button class="photo-sheet-action" type="button" data-photo-source="camera">Take a pic</button>
+            <button class="photo-sheet-action" type="button" data-photo-source="library">Choose a photo</button>
+            <button class="photo-sheet-cancel" id="photo-sheet-cancel" type="button">Cancel</button>
+          </div>
         </div>
       </section>
 
