@@ -32,6 +32,7 @@ const state = {
   cropRect: null,
   dragStart: null,
   isLoadingMore: false,
+  buyingGuide: null,
   lastSearch: null,
   orbitItemIds: new Set(),
   pagination: null,
@@ -42,6 +43,7 @@ const state = {
 
 const previewFrame = document.querySelector("#preview-frame");
 const querySummary = document.querySelector("#query-summary");
+const buyingGuide = document.querySelector("#buying-guide");
 const productGrid = document.querySelector("#product-grid");
 const statusLine = document.querySelector("#status-line");
 const searchButton = document.querySelector("#search-button");
@@ -92,6 +94,7 @@ searchButton.addEventListener("click", runCatalogSearch);
 loadMoreButton.addEventListener("click", runCatalogLoadMore);
 clearButton.addEventListener("click", resetSource);
 productGrid.addEventListener("click", handleProductGridClick);
+buyingGuide.addEventListener("click", handleProductGridClick);
 
 loadWatchedItems();
 
@@ -227,8 +230,14 @@ async function runCatalogSearch() {
     const queryEnhancement = data.queryEnhancement || {};
 
     state.products = results;
+    state.buyingGuide = {
+      recommended: data.recommended || null,
+      alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
+      summary: data.rankingSummary || null,
+    };
     state.pagination = data.pagination || null;
     logMissingProductImages(results);
+    renderBuyingGuide();
     productGrid.innerHTML = results.map(renderProductCard).join("");
     statusLine.textContent =
       results.length > 0
@@ -333,9 +342,12 @@ async function searchCatalog(source, options = {}) {
 
 function resetSearchResults() {
   state.isLoadingMore = false;
+  state.buyingGuide = null;
   state.lastSearch = null;
   state.pagination = null;
   state.products = [];
+  buyingGuide.innerHTML = "";
+  buyingGuide.hidden = true;
   productGrid.innerHTML = "";
   updateLoadMoreButton();
 }
@@ -358,10 +370,16 @@ async function loadWatchedItems() {
 }
 
 async function handleProductGridClick(event) {
+  const imageButton = event.target.closest("[data-product-image-step]");
+  if (imageButton) {
+    changeProductImage(imageButton);
+    return;
+  }
+
   const button = event.target.closest("[data-watch-product]");
   if (!button) return;
 
-  const product = state.products.find((item) => getProductWatchKey(item) === button.dataset.watchProduct);
+  const product = findProductByWatchKey(button.dataset.watchProduct);
   if (!product) return;
 
   button.disabled = true;
@@ -383,12 +401,38 @@ async function handleProductGridClick(event) {
     [saved.itemId, saved.url, saved.checkoutUrl, getProductWatchKey(product)].filter(Boolean).forEach((id) => {
       state.orbitItemIds.add(id);
     });
+    renderBuyingGuide();
     productGrid.innerHTML = state.products.map(renderProductCard).join("");
     statusLine.textContent = data.duplicate ? "Already watching that item." : "Item saved to Orbit.";
   } catch (error) {
     button.disabled = false;
     button.textContent = "Watch";
     statusLine.textContent = error.message || "Could not watch item.";
+  }
+}
+
+function changeProductImage(button) {
+  const card = button.closest("[data-product-card-key]");
+  const product = card ? findProductByWatchKey(card.dataset.productCardKey) : null;
+  const images = getProductImages(product || {});
+
+  if (!card || images.length < 2) return;
+
+  const step = Number(button.dataset.productImageStep || 0);
+  const currentIndex = Number(card.dataset.imageIndex || 0);
+  const nextIndex = (currentIndex + step + images.length) % images.length;
+  const nextImage = images[nextIndex];
+  const mainImage = card.querySelector(".product-main-image");
+  const count = card.querySelector("[data-product-image-count]");
+
+  if (!mainImage || !nextImage) return;
+
+  mainImage.src = nextImage.url;
+  mainImage.alt = nextImage.alt || product.title || "Product image";
+  card.dataset.imageIndex = String(nextIndex);
+
+  if (count) {
+    count.textContent = `${nextIndex + 1}/${images.length}`;
   }
 }
 
@@ -410,6 +454,16 @@ function getWatchPayload(product) {
 
 function getProductWatchKey(product) {
   return product.id || product.url || product.checkoutUrl || product.title;
+}
+
+function findProductByWatchKey(watchKey) {
+  return [
+    ...state.products,
+    state.buyingGuide?.recommended?.product,
+    ...(state.buyingGuide?.alternatives || []).map((item) => item.product),
+  ]
+    .filter(Boolean)
+    .find((item) => getProductWatchKey(item) === watchKey);
 }
 
 function updateLoadMoreButton() {
@@ -643,6 +697,85 @@ function waitForImage(image) {
   });
 }
 
+function renderBuyingGuide() {
+  const guide = state.buyingGuide;
+
+  if (!guide?.recommended?.product) {
+    buyingGuide.innerHTML = "";
+    buyingGuide.hidden = true;
+    return;
+  }
+
+  buyingGuide.hidden = false;
+  buyingGuide.innerHTML = `
+    <section class="guide-answer" aria-labelledby="guide-answer-title">
+      ${renderGuidePick(guide.recommended, {
+        featured: true,
+        titleId: "guide-answer-title",
+      })}
+      <div class="guide-alternatives" aria-label="Other good options">
+        ${(guide.alternatives || []).map((pick) => renderGuidePick(pick)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderGuidePick(pick, options = {}) {
+  const product = pick?.product;
+  if (!product) return "";
+
+  const titleId = options.titleId || "";
+  const titleAttribute = titleId ? ` id="${escapeAttribute(titleId)}"` : "";
+  const watchKey = getProductWatchKey(product);
+  const isWatched =
+    state.orbitItemIds.has(product.id) ||
+    state.orbitItemIds.has(product.url) ||
+    state.orbitItemIds.has(product.checkoutUrl) ||
+    state.orbitItemIds.has(watchKey);
+  const image = product.image
+    ? `<img alt="${escapeAttribute(product.title)}" src="${escapeAttribute(product.image)}" />`
+    : `<div class="guide-pick-empty">No image</div>`;
+  const signals = (pick.signals || [])
+    .slice(0, 4)
+    .map((signal) => `<span>${escapeHtml(signal)}</span>`)
+    .join("");
+  const viewLink = product.url
+    ? `<a class="product-link" href="${escapeAttribute(product.url)}" target="_blank" rel="noreferrer">View</a>`
+    : `<span class="product-link disabled">No page</span>`;
+  const buyLink = product.checkoutUrl
+    ? canBuyDirectly(product)
+      ? `<a class="product-link secondary" href="${escapeAttribute(product.checkoutUrl)}" target="_blank" rel="noreferrer">Buy</a>`
+      : `<span class="product-link secondary disabled" title="Seller needs more confidence before direct buy.">Review</span>`
+    : "";
+  const watchButton = `
+    <button class="product-link watch" type="button" data-watch-product="${escapeAttribute(watchKey)}" ${
+      isWatched ? "disabled" : ""
+    }>
+      ${isWatched ? "Watching" : "Watch"}
+    </button>
+  `;
+
+  return `
+    <article class="guide-pick ${options.featured ? "featured" : ""}">
+      <div class="guide-pick-media">${image}</div>
+      <div class="guide-pick-copy">
+        <p class="soft-label">${escapeHtml(pick.title || "Other good option")}</p>
+        <h3${titleAttribute}>${escapeHtml(product.title || "Untitled product")}</h3>
+        <p>${escapeHtml(pick.reason || "Good balance of match, seller evidence, and price.")}</p>
+        <div class="guide-signals">${signals}</div>
+        <div class="price-row">
+          <span class="price">${escapeHtml(product.price || "Price varies")}</span>
+          <span class="product-actions">
+            ${viewLink}
+            ${buyLink}
+            ${watchButton}
+          </span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function renderProductCard(product) {
   const url = escapeAttribute(product.url || "");
   const checkoutUrl = escapeAttribute(product.checkoutUrl || "");
@@ -652,8 +785,9 @@ function renderProductCard(product) {
     state.orbitItemIds.has(product.url) ||
     state.orbitItemIds.has(product.checkoutUrl) ||
     state.orbitItemIds.has(watchKey);
-  const image = product.image
-    ? `<img alt="${escapeAttribute(product.title)}" src="${escapeAttribute(product.image)}" />`
+  const images = getProductImages(product);
+  const image = images.length
+    ? renderProductMedia(product, images)
     : `<div class="product-image-empty">No image</div>`;
   const confidence = product.sellerConfidence || {};
   const trustEvidence = renderTrustEvidence(product, confidence);
@@ -674,7 +808,7 @@ function renderProductCard(product) {
   `;
 
   return `
-    <article class="product-card">
+    <article class="product-card" data-product-card-key="${escapeAttribute(watchKey)}" data-image-index="0">
       ${image}
       <div class="product-body">
         <div class="product-meta">
@@ -717,6 +851,56 @@ function renderTrustEvidence(product, confidence = {}) {
   return `<div class="trust-evidence" aria-label="Shop evidence">${chips}</div>`;
 }
 
+function renderProductMedia(product, images) {
+  const title = product.title || "Product image";
+  const primaryImage = images[0];
+  const controls =
+    images.length > 1
+      ? `
+        <button class="product-image-nav previous" type="button" data-product-image-step="-1" aria-label="${escapeAttribute(
+          `Show previous photo of ${title}`,
+        )}">&lsaquo;</button>
+        <button class="product-image-nav next" type="button" data-product-image-step="1" aria-label="${escapeAttribute(
+          `Show next photo of ${title}`,
+        )}">&rsaquo;</button>
+        <span class="product-image-count" data-product-image-count>1/${images.length}</span>
+      `
+      : "";
+
+  return `
+    <div class="product-media">
+      <img class="product-main-image" alt="${escapeAttribute(primaryImage.alt || title)}" src="${escapeAttribute(
+        primaryImage.url,
+      )}" loading="lazy" />
+      ${controls}
+    </div>
+  `;
+}
+
+function getProductImages(product) {
+  const images = Array.isArray(product.images) ? product.images : [];
+  const normalized = images
+    .map((image, index) => {
+      if (typeof image === "string") {
+        return { url: image, alt: "", kind: "unknown", position: index };
+      }
+
+      return {
+        url: image?.url || "",
+        alt: image?.alt || "",
+        kind: image?.kind || "unknown",
+        position: Number.isFinite(Number(image?.position)) ? Number(image.position) : index,
+      };
+    })
+    .filter((image) => image.url);
+
+  if (!normalized.length && product.image) {
+    normalized.push({ url: product.image, alt: product.title || "", kind: "unknown", position: 0 });
+  }
+
+  return normalized;
+}
+
 function getMockTrustEvidence(product, confidence = {}) {
   const level = confidence.level || "unknown";
 
@@ -756,68 +940,68 @@ function getMockPolicyEvidence(product) {
       {
         kind: "policy",
         label: "30-day returns",
-        detail: "Mock policy: returns accepted within 30 days.",
+        detail: "Returns appear to be accepted within 30 days.",
       },
       {
         kind: "policy",
-        label: "Support found",
-        detail: "Mock policy: support email or contact form found.",
+        label: "Contact found",
+        detail: "A customer support email, contact form, or help path was found.",
       },
       {
         kind: "policy",
         label: "Ships from US",
-        detail: "Mock policy: shipping page mentions US delivery.",
+        detail: "Shipping evidence mentions US fulfillment or delivery.",
       },
     ],
     [
       {
         kind: "policy",
         label: "14-day returns",
-        detail: "Mock policy: returns accepted within 14 days.",
+        detail: "Returns appear to be accepted within 14 days.",
       },
       {
         kind: "policy",
-        label: "Support email",
-        detail: "Mock policy: customer support email found.",
+        label: "Email support",
+        detail: "A customer support email was found.",
       },
       {
         kind: "policy",
-        label: "Shipping found",
-        detail: "Mock policy: shipping policy page found.",
+        label: "Shipping policy",
+        detail: "A shipping policy page was found.",
       },
     ],
     [
       {
         kind: "policy",
-        label: "Returns found",
-        detail: "Mock policy: return/refund language found, exact window unknown.",
+        label: "Return policy",
+        detail: "Return or refund language was found, but the exact window is unclear.",
       },
       {
         kind: "policy",
-        label: "Support found",
-        detail: "Mock policy: contact page found.",
+        label: "Contact found",
+        detail: "A contact page or support form was found.",
       },
       {
         kind: "policy",
         label: "Shipping details",
-        detail: "Mock policy: delivery timing or region information found.",
+        detail: "Delivery timing or region information was found.",
       },
     ],
     [
       {
         kind: "caution",
         label: "Exchange only",
-        detail: "Mock policy: return terms look limited to exchanges or store credit.",
+        detail: "Purchases appear allowed, but returns look limited to exchanges or store credit.",
       },
       {
         kind: "policy",
-        label: "Support found",
-        detail: "Mock policy: support path found.",
+        label: "Contact found",
+        detail: "A support path was found.",
       },
       {
         kind: "policy",
-        label: "Shipping found",
-        detail: "Mock policy: shipping policy page found.",
+        label: "Shipping policy",
+        detail: "A shipping policy page was found.",
       },
     ],
   ];

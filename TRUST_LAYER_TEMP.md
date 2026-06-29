@@ -122,13 +122,18 @@ Shopper-facing card evidence:
   - `24 reviews`
   - `0 reviews`
   - `30-day returns`
-  - `Support found`
+  - `Email support`
+  - `Contact found`
   - `Shipping details`
+  - `Shipping policy`
   - `Ships from US`
+  - `Exchange only`
   - `Saved shop`
   - `Look before buying`
 - For now, returns/contact/shipping evidence is mocked in the frontend to test product UX.
 - Tooltips can show one-line details, for example `Returns accepted within 30 days.`
+- `Exchange only` means purchases appear allowed, but returns look limited to exchanges or store credit. It does not mean the item cannot be bought.
+- Use `Email support` only when an email is found. Use `Contact found` when the evidence is a broader contact page, form, or support path.
 - Needs check: do not show in default product-card UI.
 
 Internal debug reasons can mention reachability, status codes, confidence levels, policy evidence, or mock rules. Do not show those raw reasons in product-card UI.

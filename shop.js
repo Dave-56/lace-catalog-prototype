@@ -1,6 +1,7 @@
 const shopProfiles = window.LACE_SHOP_PROFILES || [];
 
 const shopState = {
+  guideProducts: [],
   source: null,
   profile: null,
   liveDetail: null,
@@ -177,90 +178,175 @@ function renderBuyingGuideMock() {
 
       <p class="search-loading" data-search-loading hidden>Checking options, sellers, and reviews...</p>
 
-      <div class="search-results" data-search-results hidden>
-      <div class="quick-answer">
-        <div class="quick-answer-copy">
-          <p class="soft-label">Recommended for you</p>
-          <h1 id="guide-title">England Home Jersey</h1>
-          <p class="plain-summary">Best pick if you want a verified retailer and easy returns.</p>
-
-          <div class="simple-signals" aria-label="Why this was recommended">
-            <span>Verified retailer</span>
-            <span>Clear returns</span>
-            <span>Strong reviews</span>
-          </div>
-
-          <div class="simple-auth verified">
-            <span>Authenticity</span>
-            <strong>Seller evidence found</strong>
-          </div>
-
-          <div class="quick-product">
-            <div class="consumer-product-thumb">ENG</div>
-            <div>
-              <span class="price">$95</span>
-              <p>Seller evidence found</p>
-            </div>
-          </div>
-
-          <div class="consumer-actions">
-            <button class="primary-button" type="button">View product</button>
-            <button class="quiet-button" type="button">Watch</button>
-          </div>
-        </div>
-      </div>
-
-      <section class="simple-alternatives" aria-labelledby="alternatives-title">
-        <h2 id="alternatives-title">Other good options</h2>
-
-          ${renderAlternativeCard({
-            id: "value",
-            title: "Cheaper",
-            product: "Fan-style England Jersey",
-            meta: "Good budget option",
-            price: "$42",
-            authenticity: "Not verified",
-            tone: "unclear",
-          })}
-          ${renderAlternativeCard({
-            id: "speed",
-            title: "Arrives sooner",
-            product: "England Jersey - Ships from US",
-            meta: "Best if timing matters",
-            price: "$68",
-            authenticity: "Unclear",
-            tone: "unclear",
-          })}
-          ${renderAlternativeCard({
-            id: "official",
-            title: "Most official",
-            product: "Licensed England Match Jersey",
-            meta: "Verified retailer, higher price",
-            price: "$130",
-            authenticity: "Evidence found",
-            tone: "verified",
-          })}
-
-        <p class="search-note">We only say official when seller or licensing evidence is present.</p>
-      </section>
-      </div>
+      <div class="search-results" data-search-results hidden></div>
     </section>
   `;
 }
 
-function renderAlternativeCard(option) {
-  return `
-    <article class="alternative-card ${escapeAttribute(option.tone)}" data-guide-card="${escapeAttribute(option.id)}">
-      <div class="alternative-thumb">ENG</div>
-      <div>
-        <span>${escapeHtml(option.title)}</span>
-        <h3>${escapeHtml(option.product)}</h3>
-        <p>${escapeHtml(option.meta)}</p>
+function renderSearchResults(data, query) {
+  const recommended = data.recommended;
+  const alternatives = Array.isArray(data.alternatives) ? data.alternatives : [];
+  const products = Array.isArray(data.products) ? data.products : [];
+
+  shopState.guideProducts = [
+    recommended?.product,
+    ...alternatives.map((item) => item.product),
+    ...products,
+  ].filter(Boolean);
+
+  if (!recommended?.product) {
+    const hiddenReason = data.omittedTrustFiltered
+      ? "Seller confidence filtered out the visible matches."
+      : data.omittedMissingImages
+        ? "Catalog matches came back without usable product photos."
+        : "No catalog matches came back.";
+
+    return `
+      <div class="empty-brand-state">
+        No recommendation for "${escapeHtml(query)}" yet. ${escapeHtml(hiddenReason)}
       </div>
-      <strong>${escapeHtml(option.price)}</strong>
-      <small>${escapeHtml(option.authenticity)}</small>
+    `;
+  }
+
+  return `
+    <div class="quick-answer">
+      ${renderRecommendedSearchPick(recommended)}
+    </div>
+
+    ${
+      alternatives.length
+        ? `
+          <section class="simple-alternatives" aria-labelledby="alternatives-title">
+            <h2 id="alternatives-title">Other good options</h2>
+            ${alternatives.map(renderAlternativeCard).join("")}
+            <p class="search-note">Discovery stays broad. Buy recommendations favor stronger seller evidence.</p>
+          </section>
+        `
+        : ""
+    }
+  `;
+}
+
+function renderRecommendedSearchPick(pick) {
+  const product = pick.product || {};
+  const signals = renderSearchSignals(pick.signals);
+  const evidence = getSearchEvidence(product);
+  const image = renderSearchProductThumb(product, "consumer-product-thumb");
+  const watchKey = getGuideProductWatchKey(product);
+  const viewLink = product.url
+    ? `<a class="primary-button" href="${escapeAttribute(product.url)}" target="_blank" rel="noreferrer">View product</a>`
+    : "";
+  const buyLink = product.checkoutUrl && canGuideBuyDirectly(product)
+    ? `<a class="quiet-button" href="${escapeAttribute(product.checkoutUrl)}" target="_blank" rel="noreferrer">Buy</a>`
+    : "";
+  const watchButton = watchKey
+    ? `<button class="quiet-button" type="button" data-watch-guide-product="${escapeAttribute(watchKey)}">Watch</button>`
+    : "";
+
+  return `
+    <div class="quick-answer-copy">
+      <p class="soft-label">${escapeHtml(pick.title || "Recommended for you")}</p>
+      <h1 id="guide-title">${escapeHtml(product.title || "Untitled product")}</h1>
+      <p class="plain-summary">${escapeHtml(pick.reason || "Best balance of match quality, seller evidence, and offer quality.")}</p>
+
+      <div class="simple-signals" aria-label="Why this was recommended">
+        ${signals}
+      </div>
+
+      <div class="simple-auth ${evidence.tone}">
+        <span>Seller evidence</span>
+        <strong>${escapeHtml(evidence.label)}</strong>
+      </div>
+
+      <div class="quick-product">
+        ${image}
+        <div>
+          <span class="price">${escapeHtml(product.price || "Price varies")}</span>
+          <p>${escapeHtml(product.merchant || product.domain || "Shopify merchant")}</p>
+        </div>
+      </div>
+
+      <div class="consumer-actions">
+        ${viewLink}
+        ${buyLink}
+        ${watchButton}
+      </div>
+    </div>
+  `;
+}
+
+function renderAlternativeCard(pick) {
+  const product = pick.product || {};
+  const evidence = getSearchEvidence(product);
+
+  return `
+    <article class="alternative-card ${escapeAttribute(evidence.tone)}" data-guide-card="${escapeAttribute(pick.kind || "option")}">
+      ${renderSearchProductThumb(product, "alternative-thumb")}
+      <div>
+        <span>${escapeHtml(pick.title || "Other good option")}</span>
+        <h3>${escapeHtml(product.title || "Untitled product")}</h3>
+        <p>${escapeHtml(pick.reason || "Still passes image, availability, and seller checks.")}</p>
+      </div>
+      <strong>${escapeHtml(product.price || "Price varies")}</strong>
+      <small>${escapeHtml(evidence.label)}</small>
     </article>
   `;
+}
+
+function renderSearchSignals(signals = []) {
+  const displaySignals = signals.length ? signals : ["Catalog match", "Seller checked"];
+
+  return displaySignals
+    .slice(0, 4)
+    .map((signal) => `<span>${escapeHtml(signal)}</span>`)
+    .join("");
+}
+
+function renderSearchProductThumb(product, className) {
+  if (product.image) {
+    return `
+      <div class="${escapeAttribute(className)}">
+        <img alt="${escapeAttribute(product.title || "Product image")}" src="${escapeAttribute(product.image)}" />
+      </div>
+    `;
+  }
+
+  return `<div class="${escapeAttribute(className)}">${escapeHtml(getProductInitials(product.title || product.merchant || "LACE"))}</div>`;
+}
+
+function getSearchEvidence(product) {
+  const level = product.sellerConfidence?.level || "unknown";
+
+  if (level === "preferred") return { label: "Saved shop", tone: "verified" };
+  if (level === "reviewed") return { label: "Review evidence found", tone: "verified" };
+  if (level === "checked") return { label: "Reachable seller", tone: "verified" };
+
+  return { label: "Review before buying", tone: "unclear" };
+}
+
+function canGuideBuyDirectly(product) {
+  return new Set(["preferred", "checked", "reviewed"]).has(product.sellerConfidence?.level);
+}
+
+function getGuideProductWatchKey(product) {
+  return product.id || product.url || product.checkoutUrl || product.title || "";
+}
+
+function findGuideProduct(watchKey) {
+  return shopState.guideProducts.find((product) => getGuideProductWatchKey(product) === watchKey);
+}
+
+function getProductInitials(value) {
+  const words = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return words
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase() || "L";
 }
 
 function attachBuyingGuideInteractions() {
@@ -269,22 +355,91 @@ function attachBuyingGuideInteractions() {
   const loading = shopDetail.querySelector("[data-search-loading]");
   const results = shopDetail.querySelector("[data-search-results]");
 
-  form?.addEventListener("submit", (event) => {
+  form?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     if (!input.value.trim()) {
       input.value = "England jersey";
     }
 
+    const query = input.value.trim();
     results.hidden = true;
     loading.hidden = false;
+    loading.textContent = "Checking options, sellers, and reviews...";
 
-    window.setTimeout(() => {
+    try {
+      const response = await fetch("/api/catalog-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchQuery: query,
+          limit: 25,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || `Search failed with ${response.status}`);
+      }
+
+      results.innerHTML = renderSearchResults(data, query);
       loading.hidden = true;
       results.hidden = false;
       results.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 450);
+    } catch (error) {
+      loading.hidden = true;
+      results.hidden = false;
+      results.innerHTML = `<div class="empty-brand-state">${escapeHtml(error.message || "Search failed.")}</div>`;
+    }
   });
+
+  shopDetail.addEventListener("click", handleGuideProductClick);
+}
+
+async function handleGuideProductClick(event) {
+  const button = event.target.closest("[data-watch-guide-product]");
+  if (!button) return;
+
+  const product = findGuideProduct(button.dataset.watchGuideProduct);
+  if (!product) return;
+
+  button.disabled = true;
+  button.textContent = "Watching...";
+
+  try {
+    const response = await fetch("/api/orbit/sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "item",
+        name: product.title,
+        itemId: product.id,
+        sellerName: product.merchant,
+        domain: product.domain,
+        url: product.url,
+        checkoutUrl: product.checkoutUrl,
+        imageUrl: product.image,
+        source: "watch_item",
+        currentPrice: product.priceAmount,
+        currency: product.currency,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Watch failed with ${response.status}`);
+    }
+
+    button.textContent = data.duplicate ? "Watching" : "Watching";
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Watch";
+    const loading = shopDetail.querySelector("[data-search-loading]");
+    if (loading) {
+      loading.hidden = false;
+      loading.textContent = error.message || "Could not watch item.";
+    }
+  }
 }
 
 function renderLatestProductsPanel(products, latestProductsUrl) {
