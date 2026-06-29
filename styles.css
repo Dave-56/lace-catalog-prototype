@@ -1170,6 +1170,7 @@ h1 {
 .quiet-button {
   background: #dfe8e5;
   color: var(--ink);
+  text-decoration: none;
 }
 
 .quick-product {
@@ -1195,6 +1196,15 @@ h1 {
   font-size: 1.1rem;
   font-weight: 900;
   box-shadow: 5px 5px 0 rgba(207, 166, 75, 0.62);
+}
+
+.consumer-product-thumb img,
+.alternative-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .quick-product p {
@@ -1824,6 +1834,113 @@ h1 {
   font-weight: 800;
 }
 
+.buying-guide {
+  margin: 0 0 18px;
+}
+
+.buying-guide[hidden] {
+  display: none;
+}
+
+.guide-answer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.guide-pick {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  min-height: 154px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper-strong);
+}
+
+.guide-pick.featured {
+  grid-template-columns: minmax(160px, 0.42fr) minmax(0, 1fr);
+  min-height: 250px;
+  border-color: var(--line-strong);
+  box-shadow: 8px 8px 0 rgba(207, 166, 75, 0.26);
+}
+
+.guide-pick-media,
+.guide-pick-media img,
+.guide-pick-empty {
+  width: 100%;
+  height: 100%;
+  min-height: 154px;
+}
+
+.guide-pick-media img {
+  display: block;
+  object-fit: cover;
+  background: #dfe8e5;
+}
+
+.guide-pick-empty {
+  display: grid;
+  place-items: center;
+  background: #dfe8e5;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.guide-pick-copy {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+}
+
+.guide-pick-copy h3,
+.guide-pick-copy p {
+  margin: 0;
+}
+
+.guide-pick-copy h3 {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.guide-pick.featured h3 {
+  font-size: 1.35rem;
+}
+
+.guide-pick-copy > p:not(.soft-label) {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.guide-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.guide-signals span {
+  min-height: 22px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  background: #eef2f0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.guide-alternatives {
+  display: grid;
+  gap: 10px;
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1878,10 +1995,59 @@ h1 {
 }
 
 .product-media {
+  position: relative;
   display: grid;
   gap: 8px;
   padding: 0;
   background: var(--paper-strong);
+}
+
+.product-image-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: grid;
+  width: 44px;
+  place-items: center;
+  border: 0;
+  background: rgba(48, 50, 70, 0.12);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.product-image-nav.previous {
+  left: 0;
+}
+
+.product-image-nav.next {
+  right: 0;
+}
+
+.product-image-nav:hover,
+.product-image-nav:focus-visible {
+  background: rgba(48, 50, 70, 0.24);
+  outline: 2px solid rgba(48, 50, 70, 0.36);
+  outline-offset: -2px;
+}
+
+.product-image-count {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  min-width: 42px;
+  padding: 4px 6px;
+  border: 1px solid rgba(48, 50, 70, 0.22);
+  background: rgba(248, 250, 247, 0.88);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
 }
 
 .product-image-thumbs {
@@ -2145,6 +2311,7 @@ h1 {
   .orbit-capture,
   .shop-hero,
   .quick-answer,
+  .guide-answer,
   .product-grid {
     grid-template-columns: 1fr;
   }
@@ -2274,6 +2441,28 @@ h1 {
   .status-line {
     font-size: 0.8rem;
     line-height: 1.35;
+  }
+
+  .guide-pick,
+  .guide-pick.featured {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    box-shadow: none;
+  }
+
+  .guide-pick-media,
+  .guide-pick-media img,
+  .guide-pick-empty {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .guide-pick.featured h3 {
+    font-size: 1.08rem;
+  }
+
+  .guide-pick-copy {
+    padding: 10px;
   }
 
   .product-body {

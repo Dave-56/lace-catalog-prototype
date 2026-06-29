@@ -96,33 +96,31 @@ server.listen(PORT, () => {
 async function handleCatalogSearch(request, response) {
   const body = await readJsonBody(request);
   const image = await resolveImage(body);
+  const suppliedQuery = normalizeGeminiSearchQuery(body.searchQuery);
 
-  if (!image?.data) {
-    sendJson(response, 400, { error: "Send an uploaded image or imageUrl." });
+  if (!image?.data && !suppliedQuery) {
+    sendJson(response, 400, { error: "Send an uploaded image, imageUrl, or searchQuery." });
     return;
   }
 
   const limit = clampInteger(body.limit, CATALOG_PAGE_LIMIT, 1, MAX_CATALOG_PAGE_LIMIT);
   const cursor = typeof body.cursor === "string" ? body.cursor.trim() : "";
-  const suppliedQuery = normalizeGeminiSearchQuery(body.searchQuery);
   const queryEnhancement = suppliedQuery
     ? {
         used: false,
         reason: "reused_search_query",
         searchQuery: suppliedQuery,
       }
-    : await enhanceQueryWithGemini(image);
+    : image?.data
+      ? await enhanceQueryWithGemini(image)
+      : {
+          used: false,
+          reason: "text_search",
+          searchQuery: "",
+        };
   const searchQuery = suppliedQuery || queryEnhancement.searchQuery || "fashion clothing accessory";
   const preferredShopDomains = await getPreferredShopDomains();
   const catalog = {
-    like: [
-      {
-        image: {
-          content_type: image.contentType,
-          data: image.data,
-        },
-      },
-    ],
     filters: {
       available: true,
       ships_to: { country: "US" },
@@ -137,6 +135,17 @@ async function handleCatalogSearch(request, response) {
     },
   };
 
+  if (image?.data) {
+    catalog.like = [
+      {
+        image: {
+          content_type: image.contentType,
+          data: image.data,
+        },
+      },
+    ];
+  }
+
   if (cursor) {
     catalog.pagination.cursor = cursor;
   }
@@ -144,7 +153,7 @@ async function handleCatalogSearch(request, response) {
   catalog.query = searchQuery;
 
   const catalogResult = await searchCatalogWithImageFallback(catalog, {
-    allowFallback: !cursor,
+    allowFallback: Boolean(image?.data) && !cursor,
     initialLimit: limit,
     preferredShopDomains,
   });
@@ -158,6 +167,10 @@ async function handleCatalogSearch(request, response) {
     attemptedLimits,
     recoveredImages,
   } = catalogResult;
+  const buyingGuide = buildBuyingGuide(visibleProducts, {
+    queryEnhancement,
+    searchQuery,
+  });
 
   console.log(
     `[catalog-search] query="${searchQuery}" limit=${usedLimit} products=${normalizedCount} returned=${visibleProducts.length} missingImages=${missingImages} hiddenTrust=${hiddenTrust} recoveredImages=${recoveredImages}`,
@@ -165,6 +178,9 @@ async function handleCatalogSearch(request, response) {
 
   sendJson(response, 200, {
     products: visibleProducts,
+    recommended: buyingGuide.recommended,
+    alternatives: buyingGuide.alternatives,
+    rankingSummary: buyingGuide.summary,
     omittedMissingImages: missingImages,
     omittedTrustFiltered: hiddenTrust,
     catalogRecovery: {
@@ -1711,7 +1727,8 @@ function normalizeProduct(product, options = {}) {
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const availableVariant =
     variants.find((variant) => variant.availability?.available !== false) || variants[0] || {};
-  const image = findProductImage(product, availableVariant);
+  const images = findProductImages(product, availableVariant);
+  const image = images[0]?.url || findProductImage(product, availableVariant);
   const seller = availableVariant.seller || {};
   const productUrl = availableVariant.url || product.url || seller.url || "";
   const checkoutUrl = availableVariant.checkout_url || "";
@@ -1724,6 +1741,7 @@ function normalizeProduct(product, options = {}) {
     id: product.id || availableVariant.id || "",
     title: product.title || "Untitled product",
     image,
+    images: images.length ? images : image ? [{ url: image, alt: product.title || "", kind: "unknown", position: 0 }] : [],
     merchant: seller.name || seller.domain || "Shopify merchant",
     domain,
     rating,
@@ -1811,6 +1829,299 @@ function compareSellerConfidence(a, b) {
   return (a.priceAmount ?? Number.MAX_SAFE_INTEGER) - (b.priceAmount ?? Number.MAX_SAFE_INTEGER);
 }
 
+function buildBuyingGuide(products, context = {}) {
+  const candidates = Array.isArray(products) ? products.filter(Boolean) : [];
+
+  if (!candidates.length) {
+    return {
+      recommended: null,
+      alternatives: [],
+      summary: {
+        strategy: "no_visible_products",
+        signals: [],
+      },
+    };
+  }
+
+  const scoredProducts = scoreProductsForBuyingGuide(candidates, context);
+  const recommended = scoredProducts[0];
+  const alternatives = selectBuyingGuideAlternatives(scoredProducts, recommended);
+
+  return {
+    recommended: formatGuidePick(recommended, "recommended"),
+    alternatives: alternatives.map(({ product, kind }) => formatGuidePick(product, kind)),
+    summary: {
+      strategy: "shopper_utility",
+      signals: ["visual match", "intent match", "seller confidence", "offer quality", "saved shops"],
+      searchQuery: context.searchQuery || "",
+    },
+  };
+}
+
+function scoreProductsForBuyingGuide(products, context = {}) {
+  const prices = products
+    .map((product) => product.priceAmount)
+    .filter((price) => Number.isFinite(price) && price > 0)
+    .sort((a, b) => a - b);
+  const medianPrice = prices.length ? prices[Math.floor(prices.length / 2)] : null;
+  const intentTerms = getSearchIntentTerms(context);
+
+  return products
+    .map((product) => {
+      const score = scoreProductForBuyingGuide(product, {
+        intentTerms,
+        medianPrice,
+      });
+
+      return {
+        ...product,
+        buyingGuide: score,
+      };
+    })
+    .sort(compareBuyingGuideProducts);
+}
+
+function scoreProductForBuyingGuide(product, context = {}) {
+  const trust = getTrustScore(product);
+  const intent = getIntentScore(product, context.intentTerms);
+  const offer = getOfferScore(product, context.medianPrice);
+  const availability = getAvailabilityScore(product);
+  const preference = product.sellerConfidence?.level === "preferred" ? 10 : 0;
+  const riskPenalty = getRiskPenalty(product, context.medianPrice);
+  const total = trust + intent + offer + availability + preference - riskPenalty;
+  const signals = getBuyingGuideSignals(product, {
+    trust,
+    intent,
+    offer,
+    availability,
+    preference,
+    riskPenalty,
+  });
+
+  return {
+    total,
+    components: {
+      trust,
+      intent,
+      offer,
+      availability,
+      preference,
+      riskPenalty,
+    },
+    signals,
+    reason: getBuyingGuideReason(product, signals),
+  };
+}
+
+function compareBuyingGuideProducts(a, b) {
+  const scoreDelta = (b.buyingGuide?.total || 0) - (a.buyingGuide?.total || 0);
+  if (scoreDelta !== 0) return scoreDelta;
+
+  return compareSellerConfidence(a, b);
+}
+
+function selectBuyingGuideAlternatives(scoredProducts, recommended) {
+  const remaining = scoredProducts.filter((product) => getProductIdentity(product) !== getProductIdentity(recommended));
+  const selected = [];
+  const seen = new Set([getProductIdentity(recommended)]);
+
+  addAlternative(selected, seen, "cheaper", findCheaperAlternative(remaining, recommended));
+  addAlternative(selected, seen, "safer", findSaferAlternative(remaining, recommended));
+  addAlternative(selected, seen, "closest", findClosestAlternative(remaining));
+  addAlternative(selected, seen, "other_good", remaining.find((product) => !seen.has(getProductIdentity(product))));
+
+  return selected.slice(0, 3);
+}
+
+function addAlternative(selected, seen, kind, product) {
+  if (!product) return;
+
+  const identity = getProductIdentity(product);
+  if (seen.has(identity)) return;
+
+  seen.add(identity);
+  selected.push({ kind, product });
+}
+
+function findCheaperAlternative(products, recommended) {
+  const recommendedPrice = recommended?.priceAmount;
+
+  return products
+    .filter((product) => Number.isFinite(product.priceAmount))
+    .filter((product) => !Number.isFinite(recommendedPrice) || product.priceAmount < recommendedPrice)
+    .sort((a, b) => a.priceAmount - b.priceAmount || compareBuyingGuideProducts(a, b))[0];
+}
+
+function findSaferAlternative(products, recommended) {
+  const recommendedTrust = getTrustScore(recommended || {});
+
+  return products
+    .filter((product) => getTrustScore(product) > recommendedTrust)
+    .sort((a, b) => getTrustScore(b) - getTrustScore(a) || compareBuyingGuideProducts(a, b))[0];
+}
+
+function findClosestAlternative(products) {
+  return [...products].sort((a, b) => {
+    const intentDelta = (b.buyingGuide?.components?.intent || 0) - (a.buyingGuide?.components?.intent || 0);
+    if (intentDelta !== 0) return intentDelta;
+
+    return compareBuyingGuideProducts(a, b);
+  })[0];
+}
+
+function formatGuidePick(product, kind) {
+  if (!product) return null;
+
+  return {
+    kind,
+    title: getGuideTitle(kind),
+    product,
+    reason: getGuideReason(kind, product),
+    signals: product.buyingGuide?.signals || [],
+    score: Math.round(product.buyingGuide?.total || 0),
+  };
+}
+
+function getGuideTitle(kind) {
+  const titles = {
+    recommended: "Recommended for you",
+    cheaper: "Cheaper",
+    safer: "Safer seller",
+    closest: "Closest match",
+    other_good: "Other good option",
+  };
+
+  return titles[kind] || "Other good option";
+}
+
+function getGuideReason(kind, product) {
+  if (kind === "cheaper") {
+    return "Lower price. Check seller evidence before buying.";
+  }
+
+  if (kind === "safer") {
+    return "Stronger seller confidence. Good pick when trust matters more than price.";
+  }
+
+  if (kind === "closest") {
+    return "Strong title and visual-intent match among available options.";
+  }
+
+  if (kind === "other_good") {
+    return "Still passes image, availability, and seller checks.";
+  }
+
+  return product.buyingGuide?.reason || "Best balance of match quality, seller evidence, and offer quality.";
+}
+
+function getSearchIntentTerms(context = {}) {
+  const rawTerms = [
+    context.searchQuery,
+    context.queryEnhancement?.productType,
+    context.queryEnhancement?.likelyBrand,
+    context.queryEnhancement?.likelyModel,
+    ...(Array.isArray(context.queryEnhancement?.colors) ? context.queryEnhancement.colors : []),
+    ...(Array.isArray(context.queryEnhancement?.distinctiveFeatures)
+      ? context.queryEnhancement.distinctiveFeatures
+      : []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return Array.from(new Set(rawTerms.match(/[a-z0-9]+/g) || [])).filter((term) => term.length > 2);
+}
+
+function getTrustScore(product) {
+  const level = product?.sellerConfidence?.level;
+  const scores = {
+    preferred: 36,
+    reviewed: 31,
+    checked: 27,
+    unknown: 8,
+  };
+
+  return scores[level] ?? 8;
+}
+
+function getIntentScore(product, terms = []) {
+  if (!terms.length) return 18;
+
+  const haystack = [product.title, product.merchant, product.domain, product.matchLabel]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const matches = terms.filter((term) => haystack.includes(term)).length;
+  const ratio = matches / Math.max(terms.length, 1);
+
+  return Math.round(12 + ratio * 24);
+}
+
+function getOfferScore(product, medianPrice) {
+  if (!Number.isFinite(product.priceAmount)) return 8;
+  if (!Number.isFinite(medianPrice) || medianPrice <= 0) return 16;
+
+  const ratio = product.priceAmount / medianPrice;
+
+  if (ratio <= 0.45) return 8;
+  if (ratio <= 0.8) return 24;
+  if (ratio <= 1.15) return 20;
+  if (ratio <= 1.5) return 14;
+
+  return 8;
+}
+
+function getAvailabilityScore(product) {
+  let score = 0;
+
+  if (product.url) score += 8;
+  if (product.checkoutUrl) score += 6;
+  if (/available|in.?stock/i.test(product.matchLabel || "")) score += 6;
+
+  return score || 6;
+}
+
+function getRiskPenalty(product, medianPrice) {
+  let penalty = 0;
+
+  if (product.sellerConfidence?.level === "unknown") penalty += 12;
+  if (!product.checkoutUrl) penalty += 4;
+
+  if (Number.isFinite(product.priceAmount) && Number.isFinite(medianPrice) && medianPrice > 0) {
+    if (product.priceAmount / medianPrice <= 0.45) penalty += 10;
+  }
+
+  return penalty;
+}
+
+function getBuyingGuideSignals(product, components = {}) {
+  const signals = [];
+
+  if (components.intent >= 24) signals.push("Strong match");
+  else signals.push("Image-backed match");
+
+  if (product.sellerConfidence?.level === "preferred") signals.push("Saved shop");
+  else if (product.sellerConfidence?.level === "reviewed") signals.push("Review evidence");
+  else if (product.sellerConfidence?.level === "checked") signals.push("Reachable seller");
+
+  if (Number.isFinite(product.priceAmount)) signals.push("Known price");
+  if (product.checkoutUrl) signals.push("Buy link ready");
+  if (components.riskPenalty > 0) signals.push("Review before buying");
+
+  return signals.slice(0, 4);
+}
+
+function getBuyingGuideReason(product, signals) {
+  const safeSignal = signals.find((signal) => ["Saved shop", "Review evidence", "Reachable seller"].includes(signal));
+  const offerSignal = product.checkoutUrl ? "buy link ready" : "product page ready";
+
+  return `Best balance of match quality, ${safeSignal || "seller evidence"}, and ${offerSignal}.`;
+}
+
+function getProductIdentity(product) {
+  return product?.id || product?.url || product?.checkoutUrl || product?.title || "";
+}
+
 function normalizeRating(rating) {
   if (!rating || typeof rating !== "object") {
     return {
@@ -1851,6 +2162,92 @@ function findProductImage(product, availableVariant) {
   }
 
   return findImageUrl(product) || findLikelyImageUrl(product);
+}
+
+function findProductImages(product, availableVariant) {
+  const candidates = [
+    product.image,
+    product.image_url,
+    product.imageUrl,
+    product.featured_image,
+    product.featuredImage,
+    product.featured_media,
+    product.featuredMedia,
+    product.media,
+    product.images,
+    availableVariant.image,
+    availableVariant.image_url,
+    availableVariant.imageUrl,
+    availableVariant.featured_image,
+    availableVariant.featuredImage,
+    availableVariant.media,
+  ];
+  const seenUrls = new Set();
+  const images = [];
+
+  const addImage = (image, fallbackPosition) => {
+    const url = normalizeImageUrl(image?.url || image?.src || image);
+    const key = normalizeUrlKey(url);
+
+    if (!url || seenUrls.has(key)) return;
+
+    seenUrls.add(key);
+    images.push({
+      url,
+      alt: cleanText(image?.alt || image?.alt_text || product.title),
+      position: Number.isFinite(Number(image?.position)) ? Number(image.position) : fallbackPosition,
+      variantMatch: Boolean(image?.variantMatch),
+    });
+  };
+
+  candidates.forEach((candidate, index) => {
+    collectProductImages(candidate, addImage, index);
+  });
+
+  return images
+    .map((image) => ({
+      ...image,
+      kind: classifyShopProductImage(image),
+    }))
+    .sort(compareShopProductImages);
+}
+
+function collectProductImages(value, addImage, fallbackPosition, seen = new Set()) {
+  if (!value) return;
+
+  if (typeof value === "string") {
+    addImage(value, fallbackPosition);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      collectProductImages(item, addImage, index, seen);
+    });
+    return;
+  }
+
+  if (typeof value !== "object" || seen.has(value)) return;
+  seen.add(value);
+
+  const url = findImageUrl(value, { allowStringUrl: true, allowGenericUrl: true });
+  if (url) {
+    addImage(
+      {
+        url,
+        alt: value.alt || value.alt_text,
+        position: value.position,
+        variantMatch: value.variantMatch,
+      },
+      fallbackPosition,
+    );
+  }
+
+  ["images", "media", "nodes", "edges", "sources"].forEach((key) => {
+    if (key in value) {
+      collectProductImages(value[key], addImage, fallbackPosition, seen);
+    }
+  });
 }
 
 function findImageUrl(value, options = {}, seen = new Set()) {
